@@ -1,22 +1,39 @@
 from datetime import datetime
-from app.database.base import Base
+
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, DateTime,Text
-from sqlalchemy.orm import Mapped,mapped_column
 
 from app.database.base import Base
+
 
 class Topic(Base):
     __tablename__ = "topics"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
     name = Column(
         String(100),
         unique=True,
-        nullable=False,
+        nullable=False
     )
 
-    description = Column(Text, nullable=True)
+    description = Column(
+        Text,
+        nullable=True
+    )
 
-    created_at = Column(DateTime, default=datetime.utcnow,nullable=False)
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
 
+    articles = relationship(
+        "Article",
+        back_populates="topic",
+        cascade="all, delete"
+    )
