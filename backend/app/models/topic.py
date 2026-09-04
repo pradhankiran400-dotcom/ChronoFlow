@@ -1,7 +1,7 @@
 from datetime import datetime
 from app.database.base import Base
 from sqlalchemy.orm import relationship
-from sqlalchemy import Integer, String, DateTime,Text
+from sqlalchemy import Column, Integer, String, DateTime,Text
 from sqlalchemy.orm import Mapped,mapped_column
 
 from app.database.base import Base
@@ -9,10 +9,14 @@ from app.database.base import Base
 class Topic(Base):
     __tablename__ = "topics"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(
+        String(100),
+        unique=True,
+        nullable=False,
+    )
 
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True,nullable=False)
+    description = Column(Text, nullable=True)
 
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow,nullable=False)
 
-    articles = relationship("Article", back_populates="topic",cascade="all, delete")

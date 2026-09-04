@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.database.base import Base
 from app.database.connection import engine
 from app.models.topic import Topic
+from app.routes import topic
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,3 +20,5 @@ def health_check():
     return {
         "status": "healthy"
     }
+
+app.include_router(topic.router)
