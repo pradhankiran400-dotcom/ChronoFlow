@@ -31,16 +31,21 @@ class Retriever:
 
             article_texts.append(text)
 
-        article_embeddings = (
-            self.embedder.model.encode(
-                article_texts,
-                normalize_embeddings=True
-            )
-        )
+        if self.embedder.model:
+            try:
+                article_embeddings = self.embedder.model.encode(
+                    article_texts,
+                    normalize_embeddings=True
+                )
+            except Exception:
+                article_embeddings = np.array([self.embedder.create_embedding(t) for t in article_texts])
+        else:
+            article_embeddings = np.array([self.embedder.create_embedding(t) for t in article_texts])
 
         question_embedding = (
             self.embedder.create_embedding(question)
         )
+
 
         scores = np.dot(
             article_embeddings,

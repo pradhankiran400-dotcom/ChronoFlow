@@ -7,6 +7,9 @@ class TagResponse(BaseModel):
     id: int
     name: str
 
+    class Config:
+        from_attributes = True
+
 class TagUpdate(BaseModel):
     name: str
 

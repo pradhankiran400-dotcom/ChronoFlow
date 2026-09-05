@@ -1,21 +1,24 @@
 from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel
-from app.database.base import Base
+
 
 class TopicCreate(BaseModel):
-    name:str
-    description : str|None =None
+    name: str
+    description: Optional[str] = None
+
 
 class TopicUpdate(BaseModel):
-    name:str|None = None
-    description : str|None = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+
 
 class TopicResponse(BaseModel):
-    id:int
-    name:str
-    description : str|None = None
-    created_at:datetime
-
+    id: int
+    name: str
+    description: Optional[str] = None
+    created_at: datetime
 
     class Config:
-        form_attributes = True
+        from_attributes = True

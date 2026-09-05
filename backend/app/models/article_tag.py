@@ -1,0 +1,19 @@
+from sqlalchemy import Column, ForeignKey, Integer, Table
+from app.database.base import Base
+
+article_tags = Table(
+    "article_tags",
+    Base.metadata,
+    Column(
+        "article_id",
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "tag_id",
+        Integer,
+        ForeignKey("tags.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)

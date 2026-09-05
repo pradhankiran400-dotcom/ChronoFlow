@@ -60,7 +60,20 @@ class Article(Base):
         nullable=False
     )
 
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
     topic = relationship(
         "Topic",
+        back_populates="articles"
+    )
+
+    tags = relationship(
+        "Tag",
+        secondary="article_tags",
         back_populates="articles"
     )
