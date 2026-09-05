@@ -98,14 +98,21 @@ app = FastAPI(
 # Normalize request path if Vercel serverless rewrites include script filename
 class PathNormalizeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        path = request.scope.get("path", "")
-        if path.startswith("/api/index.py"):
-            stripped = path[len("/api/index.py"):] or "/"
-            request.scope["path"] = stripped
-        elif path.startswith("/index.py"):
-            stripped = path[len("/index.py"):] or "/"
-            request.scope["path"] = stripped
+        # 1. First priority: Vercel's x-matched-path or x-forwarded-uri header containing the real client path
+        matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
+        if matched and not matched.startswith("/api/index.py") and not matched.startswith("/index.py"):
+            request.scope["path"] = matched
+        else:
+            # 2. Strip /api/index.py or /index.py prefix if directly invoked
+            path = request.scope.get("path", "")
+            if path.startswith("/api/index.py"):
+                stripped = path[len("/api/index.py"):] or "/"
+                request.scope["path"] = stripped
+            elif path.startswith("/index.py"):
+                stripped = path[len("/index.py"):] or "/"
+                request.scope["path"] = stripped
         return await call_next(request)
+
 
 app.add_middleware(PathNormalizeMiddleware)
 
