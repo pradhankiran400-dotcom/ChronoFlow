@@ -47,11 +47,11 @@ except Exception as exc:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Eagerly create tables at module import time (critical for Vercel which skips ASGI lifespan)
+# Flag to track if DB tables have been created this cold start
 _db_initialized = False
 
 def _ensure_db():
-    """Create tables and seed data once per cold start."""
+    """Create tables once per cold start. Safe to call multiple times."""
     global _db_initialized
     if _db_initialized:
         return
@@ -59,12 +59,8 @@ def _ensure_db():
     try:
         from app.database.base import Base
         Base.metadata.create_all(bind=engine)
-        logger.info(f"Database tables created ({DATABASE_URL})")
     except Exception as exc:
         logger.warning(f"DB init notice: {exc}")
-
-# Run immediately on import
-_ensure_db()
 
 
 def get_db():
