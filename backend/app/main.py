@@ -28,8 +28,11 @@ from app.models.article_tag import article_tags
 
 from app.routes import topic, tag, article, timeline, search, ai, auth
 
-# Auto-create tables (SQLite or PostgreSQL)
-Base.metadata.create_all(bind=engine)
+# Auto-create tables safely
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as exc:
+    print(f"Database schema initialization notice: {exc}")
 
 app = FastAPI(
     title="ChronoFlow API",

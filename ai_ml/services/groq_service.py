@@ -1,24 +1,37 @@
+import os
 import logging
-from groq import Groq
-from config import GROQ_API_KEY
 
 logger = logging.getLogger(__name__)
+
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None
+
+try:
+    from config import GROQ_API_KEY
+except ImportError:
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 
 class GroqService:
 
     def __init__(self):
-        self.api_key = GROQ_API_KEY
-        self.client = Groq(api_key=self.api_key) if self.api_key else None
+        self.api_key = os.getenv("GROQ_API_KEY") or GROQ_API_KEY
+        self.client = None
+        if self.api_key and Groq is not None:
+            try:
+                self.client = Groq(api_key=self.api_key)
+            except Exception as exc:
+                logger.warning(f"Failed to initialize Groq client: {exc}")
 
     def generate_answer(self, question, context):
         if not self.client:
-            # Cleanly format the fallback context without raw TITLE/CONTENT metadata dumps
             clean_summary = self._format_fallback_context(context)
             return (
                 f"### 📖 Summary from ChronoFlow Knowledge Base\n\n"
                 f"{clean_summary}\n\n"
-                "*Tip: Configure `GROQ_API_KEY` in `backend/.env` for AI LLM synthesis.*"
+                "*Tip: Configure `GROQ_API_KEY` in environment variables for AI synthesis.*"
             )
 
         prompt = f"""
@@ -57,18 +70,12 @@ Provide a clear, accurate, and structured Markdown answer with bullet points if 
         """Helper to format raw article context into clean readable text."""
         lines = context.split("\n")
         output = []
-        current_title = ""
-        current_summary = ""
 
         for line in lines:
             line_str = line.strip()
-            if line_str.startswith("TITLE:"):
-                current_title = ""
-            elif line_str.startswith("SUMMARY:"):
-                current_summary = ""
-            elif line_str.startswith("CONTENT:"):
+            if line_str.startswith("TITLE:") or line_str.startswith("SUMMARY:"):
                 continue
-            elif line_str.startswith("Full reporting at:"):
+            elif line_str.startswith("CONTENT:") or line_str.startswith("Full reporting at:"):
                 continue
             elif line_str.startswith("http://") or line_str.startswith("https://"):
                 continue
@@ -78,7 +85,6 @@ Provide a clear, accurate, and structured Markdown answer with bullet points if 
         if not output:
             return context
 
-        # Remove duplicate bullets & truncate long raw text
         unique_bullets = []
         seen = set()
         for bullet in output:

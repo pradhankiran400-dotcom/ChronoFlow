@@ -3,8 +3,12 @@ from pathlib import Path
 
 # Add project root, backend, and ai_ml to sys.path
 ROOT_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_DIR / "backend"))
-sys.path.insert(0, str(ROOT_DIR / "ai_ml"))
-sys.path.insert(0, str(ROOT_DIR))
+for p in [str(ROOT_DIR / "backend"), str(ROOT_DIR / "ai_ml"), str(ROOT_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from app.main import app
+
+# Universal export for Vercel Serverless Function runtime
+handler = app
+application = app
