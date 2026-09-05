@@ -7,8 +7,12 @@ from sqlalchemy.orm import sessionmaker
 load_dotenv()
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_DB_PATH = BACKEND_DIR / "chronoflow.db"
+is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
 
+if is_serverless:
+    DEFAULT_DB_PATH = Path("/tmp/chronoflow.db")
+else:
+    DEFAULT_DB_PATH = BACKEND_DIR / "chronoflow.db"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
