@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     name: str
     picture: Optional[str] = None
     google_id: Optional[str] = None
