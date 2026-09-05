@@ -88,12 +88,24 @@ async def lifespan(app: FastAPI):
     yield
 
 
+# Eagerly seed data at module import time (Vercel skips ASGI lifespan events)
+try:
+    _seed_db = SessionLocal()
+    try:
+        seed_default_data(_seed_db)
+    finally:
+        _seed_db.close()
+except Exception as _seed_exc:
+    print(f"Notice: eager seed: {_seed_exc}")
+
+
 app = FastAPI(
     title="ChronoFlow API",
     description="AI-powered interactive timeline platform",
     version="1.0.0",
     lifespan=lifespan
 )
+
 
 # Normalize request path if Vercel serverless rewrites include script filename
 class PathNormalizeMiddleware(BaseHTTPMiddleware):
