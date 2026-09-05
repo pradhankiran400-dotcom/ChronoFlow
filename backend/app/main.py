@@ -73,30 +73,25 @@ def seed_default_data(db: Session):
         print(f"Seed notice: {exc}")
 
 
+from app.database.connection import engine, SessionLocal, _ensure_db
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB tables and initial data asynchronously on server startup
     try:
-        Base.metadata.create_all(bind=engine)
-        db = SessionLocal()
-        try:
-            seed_default_data(db)
-        finally:
-            db.close()
+        _ensure_db()
     except Exception as exc:
         print(f"Notice: Database schema creation: {exc}")
     yield
 
 
-# Eagerly seed data at module import time (Vercel skips ASGI lifespan events)
+# Eagerly initialize DB at module import time (Vercel skips ASGI lifespan events)
 try:
-    _seed_db = SessionLocal()
-    try:
-        seed_default_data(_seed_db)
-    finally:
-        _seed_db.close()
+    _ensure_db()
 except Exception as _seed_exc:
-    print(f"Notice: eager seed: {_seed_exc}")
+    print(f"Notice: eager db init: {_seed_exc}")
+
 
 
 app = FastAPI(
