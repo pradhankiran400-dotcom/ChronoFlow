@@ -121,8 +121,9 @@ app.add_middleware(
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-FRONTEND_DIST = _ROOT_DIR / "frontend" / "dist"
-assets_dir = FRONTEND_DIST / "assets"
+# Static directory resolution (backend/app/static or frontend/dist)
+STATIC_DIR = _APP_DIR / "static" if (_APP_DIR / "static").exists() else (_ROOT_DIR / "frontend" / "dist")
+assets_dir = STATIC_DIR / "assets"
 if assets_dir.is_dir():
     app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
@@ -168,7 +169,7 @@ app.include_router(api_router)
 # Serve Frontend React Single Page Application (SPA)
 @app.get("/")
 def home():
-    index_file = FRONTEND_DIST / "index.html"
+    index_file = STATIC_DIR / "index.html"
     if index_file.is_file():
         return FileResponse(str(index_file))
     return {
@@ -182,14 +183,14 @@ def home():
 @app.get("/{full_path:path}")
 def serve_spa(full_path: str):
     # Pass through API and OpenAPI/Docs endpoints
-    if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+    if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
         return {"detail": "Not Found"}
     
-    file_path = FRONTEND_DIST / full_path
+    file_path = STATIC_DIR / full_path
     if full_path and file_path.is_file():
         return FileResponse(str(file_path))
     
-    index_file = FRONTEND_DIST / "index.html"
+    index_file = STATIC_DIR / "index.html"
     if index_file.is_file():
         return FileResponse(str(index_file))
     
