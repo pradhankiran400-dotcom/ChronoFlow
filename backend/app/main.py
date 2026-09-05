@@ -166,12 +166,35 @@ def api_health():
 app.include_router(api_router)
 
 
+import mimetypes
+
+MIME_TYPES = {
+    ".js": "application/javascript",
+    ".mjs": "application/javascript",
+    ".css": "text/css",
+    ".html": "text/html",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+}
+
+def get_mime_type(path: Path) -> str:
+    ext = path.suffix.lower()
+    return MIME_TYPES.get(ext, mimetypes.guess_type(str(path))[0] or "application/octet-stream")
+
+
 # Serve Frontend React Single Page Application (SPA)
 @app.get("/")
 def home():
     index_file = STATIC_DIR / "index.html"
     if index_file.is_file():
-        return FileResponse(str(index_file))
+        return FileResponse(str(index_file), media_type="text/html")
     return {
         "message": "Welcome to ChronoFlow API",
         "status": "online",
@@ -188,10 +211,10 @@ def serve_spa(full_path: str):
     
     file_path = STATIC_DIR / full_path
     if full_path and file_path.is_file():
-        return FileResponse(str(file_path))
+        return FileResponse(str(file_path), media_type=get_mime_type(file_path))
     
     index_file = STATIC_DIR / "index.html"
     if index_file.is_file():
-        return FileResponse(str(index_file))
+        return FileResponse(str(index_file), media_type="text/html")
     
     return {"detail": "Not Found"}
