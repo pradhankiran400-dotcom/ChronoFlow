@@ -1,5 +1,18 @@
 import os
+import sys
+from pathlib import Path
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Ensure backend, ai_ml, and root paths are always on sys.path for cloud runtimes (Vercel, Render, AWS)
+_CURRENT_FILE = Path(__file__).resolve()
+_APP_DIR = _CURRENT_FILE.parent
+_BACKEND_DIR = _APP_DIR.parent
+_ROOT_DIR = _BACKEND_DIR.parent
+
+for _p in [str(_BACKEND_DIR), str(_ROOT_DIR), str(_ROOT_DIR / "ai_ml")]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
