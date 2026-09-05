@@ -31,6 +31,3 @@ py-modules = ["main"]
 where = ["."]
 include = ["backend*", "ai_ml*", "api*"]
 exclude = ["frontend*", "tests*", "scripts*"]
-
-[tool.vercel]
-entrypoint = "main:app"
