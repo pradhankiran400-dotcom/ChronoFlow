@@ -206,8 +206,8 @@ def home():
 @app.get("/{full_path:path}")
 def serve_spa(full_path: str):
     # Pass through API and OpenAPI/Docs endpoints
-    if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
-        return {"detail": "Not Found"}
+    if full_path.startswith("api/") or full_path == "api" or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+        raise HTTPException(status_code=404, detail="Not Found")
     
     file_path = STATIC_DIR / full_path
     if full_path and file_path.is_file():
@@ -217,4 +217,4 @@ def serve_spa(full_path: str):
     if index_file.is_file():
         return FileResponse(str(index_file), media_type="text/html")
     
-    return {"detail": "Not Found"}
+    raise HTTPException(status_code=404, detail="Not Found")

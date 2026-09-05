@@ -9,7 +9,8 @@ router = APIRouter(
     tags = ["Topics"]
 )
 
-@router.post("/",response_model=TopicResponse,status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TopicResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TopicResponse, status_code=status.HTTP_201_CREATED)
 def create_topic(topic:TopicCreate,db:Session = Depends(get_db)):
     existing_topic = (db.query(Topic).filter(Topic.name == topic.name).first())
     if existing_topic:
@@ -23,10 +24,12 @@ def create_topic(topic:TopicCreate,db:Session = Depends(get_db)):
     db.refresh(new_topic)
     return new_topic
 
-@router.get("/",response_model=list[TopicResponse])
+@router.get("", response_model=list[TopicResponse])
+@router.get("/", response_model=list[TopicResponse])
 def get_topics(db:Session = Depends(get_db)):
     topics = db.query(Topic).all()
     return topics
+
 
 @router.get("/{topic_id}",response_model=TopicResponse)
 def get_topic(topic_id:int,db:Session = Depends(get_db)):
