@@ -6,6 +6,13 @@
 !.env.example
 
 # =========================
+# Root Python files (break Vercel detection)
+# =========================
+/main.py
+/pyproject.toml
+
+
+# =========================
 # Python Cache
 # =========================
 __pycache__/
