@@ -118,14 +118,13 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-def home():
-    return {
-        "message": "Welcome to ChronoFlow API",
-        "status": "online",
-        "docs": "/docs",
-        "health": "/health"
-    }
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+FRONTEND_DIST = _ROOT_DIR / "frontend" / "dist"
+assets_dir = FRONTEND_DIST / "assets"
+if assets_dir.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 
 @app.get("/health")
@@ -164,3 +163,34 @@ def api_health():
 
 
 app.include_router(api_router)
+
+
+# Serve Frontend React Single Page Application (SPA)
+@app.get("/")
+def home():
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.is_file():
+        return FileResponse(str(index_file))
+    return {
+        "message": "Welcome to ChronoFlow API",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+
+@app.get("/{full_path:path}")
+def serve_spa(full_path: str):
+    # Pass through API and OpenAPI/Docs endpoints
+    if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+        return {"detail": "Not Found"}
+    
+    file_path = FRONTEND_DIST / full_path
+    if full_path and file_path.is_file():
+        return FileResponse(str(file_path))
+    
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.is_file():
+        return FileResponse(str(index_file))
+    
+    return {"detail": "Not Found"}

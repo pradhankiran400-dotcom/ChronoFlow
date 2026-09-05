@@ -34,7 +34,8 @@ node_modules/
 # =========================
 # Frontend Build Files
 # =========================
-frontend/dist/
+# frontend/dist/ is tracked for zero-config serverless deployments
+!frontend/dist/
 frontend/.vite/
 
 # =========================
