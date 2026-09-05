@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -30,16 +31,22 @@ from app.models.article_tag import article_tags
 
 from app.routes import topic, tag, article, timeline, search, ai, auth
 
-# Auto-create tables safely
-try:
-    Base.metadata.create_all(bind=engine)
-except Exception as exc:
-    print(f"Database schema initialization notice: {exc}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize DB tables asynchronously on server startup
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        print(f"Notice: Database schema creation: {exc}")
+    yield
+
 
 app = FastAPI(
     title="ChronoFlow API",
     description="AI-powered interactive timeline platform",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -97,7 +104,6 @@ if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "index.html").exists():
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        # Don't intercept API routes
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
         target_file = _FRONTEND_DIST / full_path

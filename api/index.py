@@ -1,5 +1,5 @@
-import os
 import sys
+import os
 from pathlib import Path
 
 # Add project root, backend, and ai_ml to sys.path
@@ -10,10 +10,6 @@ for p in [str(ROOT_DIR / "backend"), str(ROOT_DIR / "ai_ml"), str(ROOT_DIR)]:
 
 from app.main import app
 
-try:
-    from mangum import Mangum
-    handler = Mangum(app, lifespan="off")
-except Exception:
-    handler = app
-
+# Vercel Serverless Function entrypoint
+handler = app
 application = app
