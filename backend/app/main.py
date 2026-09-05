@@ -15,13 +15,13 @@ for _p in [str(_BACKEND_DIR), str(_ROOT_DIR), str(_ROOT_DIR / "ai_ml")]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from sqlalchemy.orm import Session
 
 from app.database.base import Base
-from app.database.connection import engine
+from app.database.connection import engine, SessionLocal
 
 from app.models.topic import Topic
 from app.models.tag import Tag
@@ -32,11 +32,57 @@ from app.models.article_tag import article_tags
 from app.routes import topic, tag, article, timeline, search, ai, auth
 
 
+def seed_default_data(db: Session):
+    """Seed sample data if DB is completely empty."""
+    try:
+        if db.query(Topic).count() == 0:
+            ai_topic = Topic(name="Artificial Intelligence", description="Key breakthroughs in AI, LLMs, and intelligent systems.")
+            space_topic = Topic(name="Space Exploration", description="Milestones in space missions, telescopes, and lunar exploration.")
+            climate_topic = Topic(name="Climate & Science", description="Developments in climate science, renewable energy, and planet Earth.")
+            db.add_all([ai_topic, space_topic, climate_topic])
+            db.commit()
+
+            ai_tag = Tag(name="AI")
+            space_tag = Tag(name="Space")
+            tech_tag = Tag(name="Technology")
+            db.add_all([ai_tag, space_tag, tech_tag])
+            db.commit()
+
+            from datetime import date
+            a1 = Article(
+                title="ChatGPT Public Launch",
+                summary="OpenAI released ChatGPT, bringing conversational AI to hundreds of millions.",
+                content="ChatGPT was released for public access in November 2022, rapidly becoming one of the fastest-growing consumer applications in history.",
+                source_url="https://openai.com/blog/chatgpt",
+                event_date=date(2022, 11, 30),
+                topic_id=ai_topic.id,
+                tags=[ai_tag, tech_tag]
+            )
+            a2 = Article(
+                title="James Webb First Deep Field",
+                summary="NASA unveiled the first full-color deep space images from the James Webb Space Telescope.",
+                content="The James Webb Space Telescope delivered infrared images showing galaxy clusters billions of light-years away in July 2022.",
+                source_url="https://nasa.gov/webbfirstimages",
+                event_date=date(2022, 7, 12),
+                topic_id=space_topic.id,
+                tags=[space_tag, tech_tag]
+            )
+            db.add_all([a1, a2])
+            db.commit()
+    except Exception as exc:
+        print(f"Seed notice: {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB tables asynchronously on server startup
+    # Initialize DB tables and initial data asynchronously on server startup
     try:
         Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            seed_default_data(db)
+        finally:
+            db.close()
     except Exception as exc:
         print(f"Notice: Database schema creation: {exc}")
     yield
@@ -49,6 +95,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Normalize request path if Vercel serverless rewrites include script filename
+class PathNormalizeMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.scope.get("path", "")
+        if path.startswith("/api/index.py"):
+            stripped = path[len("/api/index.py"):] or "/"
+            request.scope["path"] = stripped
+        elif path.startswith("/index.py"):
+            stripped = path[len("/index.py"):] or "/"
+            request.scope["path"] = stripped
+        return await call_next(request)
+
+app.add_middleware(PathNormalizeMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -57,7 +117,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Direct API routes
+
+@app.get("/")
+def home():
+    return {
+        "message": "Welcome to ChronoFlow API",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+
+# Direct API routes (e.g. /topics, /articles, /auth, etc.)
 app.include_router(auth.router)
 app.include_router(topic.router)
 app.include_router(tag.router)
@@ -66,7 +142,7 @@ app.include_router(timeline.router)
 app.include_router(search.router)
 app.include_router(ai.router)
 
-# /api prefixed routes (for frontend and reverse proxies)
+# /api prefixed routes (e.g. /api/topics, /api/articles, /api/health)
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router)
 api_router.include_router(topic.router)
@@ -79,7 +155,7 @@ api_router.include_router(ai.router)
 
 @api_router.get("/")
 def api_home():
-    return {"message": "Welcome to ChronoFlow API"}
+    return {"message": "Welcome to ChronoFlow API", "status": "online"}
 
 
 @api_router.get("/health")
@@ -88,33 +164,3 @@ def api_health():
 
 
 app.include_router(api_router)
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-
-# Serve static frontend SPA build if present
-_FRONTEND_DIST = _ROOT_DIR / "frontend" / "dist"
-if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "index.html").exists():
-    _ASSETS_DIR = _FRONTEND_DIST / "assets"
-    if _ASSETS_DIR.exists():
-        app.mount("/assets", StaticFiles(directory=str(_ASSETS_DIR)), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
-            return JSONResponse(status_code=404, content={"detail": "Not Found"})
-        target_file = _FRONTEND_DIST / full_path
-        if target_file.is_file():
-            return FileResponse(str(target_file))
-        return FileResponse(str(_FRONTEND_DIST / "index.html"))
-else:
-    @app.get("/")
-    def root_home():
-        return {
-            "message": "Welcome to ChronoFlow API",
-            "docs": "/docs",
-            "health": "/health"
-        }
