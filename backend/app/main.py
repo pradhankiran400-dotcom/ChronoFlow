@@ -16,6 +16,8 @@ for _p in [str(_BACKEND_DIR), str(_ROOT_DIR), str(_ROOT_DIR / "ai_ml")]:
 
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.database.base import Base
 from app.database.connection import engine
@@ -48,18 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/")
-def home():
-    return {"message": "Welcome to ChronoFlow API"}
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-
-# Direct routes
+# Direct API routes
 app.include_router(auth.router)
 app.include_router(topic.router)
 app.include_router(tag.router)
@@ -68,7 +59,7 @@ app.include_router(timeline.router)
 app.include_router(search.router)
 app.include_router(ai.router)
 
-# /api prefixed routes (for Vercel serverless proxy)
+# /api prefixed routes (for frontend and reverse proxies)
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router)
 api_router.include_router(topic.router)
@@ -78,12 +69,46 @@ api_router.include_router(timeline.router)
 api_router.include_router(search.router)
 api_router.include_router(ai.router)
 
+
 @api_router.get("/")
 def api_home():
     return {"message": "Welcome to ChronoFlow API"}
+
 
 @api_router.get("/health")
 def api_health():
     return {"status": "healthy"}
 
+
 app.include_router(api_router)
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+
+# Serve static frontend SPA build if present
+_FRONTEND_DIST = _ROOT_DIR / "frontend" / "dist"
+if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "index.html").exists():
+    _ASSETS_DIR = _FRONTEND_DIST / "assets"
+    if _ASSETS_DIR.exists():
+        app.mount("/assets", StaticFiles(directory=str(_ASSETS_DIR)), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Don't intercept API routes
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        target_file = _FRONTEND_DIST / full_path
+        if target_file.is_file():
+            return FileResponse(str(target_file))
+        return FileResponse(str(_FRONTEND_DIST / "index.html"))
+else:
+    @app.get("/")
+    def root_home():
+        return {
+            "message": "Welcome to ChronoFlow API",
+            "docs": "/docs",
+            "health": "/health"
+        }

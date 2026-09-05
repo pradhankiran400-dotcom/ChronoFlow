@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -9,6 +10,10 @@ for p in [str(ROOT_DIR / "backend"), str(ROOT_DIR / "ai_ml"), str(ROOT_DIR)]:
 
 from app.main import app
 
-# Universal export for Vercel Serverless Function runtime
-handler = app
+try:
+    from mangum import Mangum
+    handler = Mangum(app, lifespan="off")
+except Exception:
+    handler = app
+
 application = app
